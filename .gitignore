@@ -1,0 +1,12 @@
+# profiling files and core files
+
+# exp
+L1*/exp/*/*
+L1*/exp/*
+L1*/exp*/*/*
+
+# data
+L1*/data/*/*
+L1*/data/*
+L1*/dump
+L1*/fbank*/*
