@@ -46,6 +46,7 @@ maxlen_out=150 # if output length > maxlen_out, batchsize is automatically reduc
 # optimization related
 opt=adadelta
 epochs=15
+patience=0
 
 # label smoothing
 lsm_type=unigram
@@ -73,9 +74,6 @@ recog_model=model.acc.best # set a model to be used for decoding: 'model.acc.bes
 # scheduled sampling option
 samp_prob=0.0
 
-# data
-hkust1=/export/corpora/LDC/LDC2005S15/
-hkust2=/export/corpora/LDC/LDC2005T32/
 
 # exp tag
 tag="" # tag for managing experiments.
@@ -179,14 +177,15 @@ if [ -z ${lmtag} ]; then
     lmtag=${lm_layers}layer_unit${lm_units}_${lm_opt}_bs${lm_batchsize}
 fi
 if [ -z ${tag} ]; then
-    expdir=exp/train_${backend}_${etype}_e${elayers}_subsample${subsample}_unit${eunits}_proj${eprojs}_d${dlayers}_unit${dunits}_${atype}_aconvc${aconv_chans}_aconvf${aconv_filts}_mtlalpha${mtlalpha}_${opt}_sampprob${samp_prob}_bs${batchsize}_mli${maxlen_in}_mlo${maxlen_out}_decoder-drop_0.0_sigmoid_att
+    expdir=exp/train_${backend}_${etype}_e${elayers}_subsample${subsample}_unit${eunits}_proj${eprojs}_d${dlayers}_unit${dunits}_${atype}_aconvc${aconv_chans}_aconvf${aconv_filts}_mtlalpha${mtlalpha}_${opt}_sampprob${samp_prob}_bs${batchsize}_mli${maxlen_in}_mlo${maxlen_out}_patience${patience}_decoder-drop_0.0_sigmoid_att
     if ${do_delta}; then
         expdir=${expdir}_delta
     fi
 else
     expdir=exp/${train_set}_${backend}_${tag}
 fi
-exp_dir=${expdir}_gt_append_mean
+expdir=${expdir}_gt_append_mean
+echo ${expdir}
 mkdir -p ${expdir}
 
 if [ ${stage} -le 4 ]; then
@@ -225,10 +224,16 @@ if [ ${stage} -le 4 ]; then
         --opt ${opt} \
         --dropout-rate-decoder 0.0  \
         --use-ground-truth true \
-        --model-module "espnet.nets.${backend}_backend.e2e_asr_append_mean:E2E"
+        --model-module "espnet.nets.${backend}_backend.e2e_asr_append_mean:E2E" \
+        --patience ${patience} \
         --epochs ${epochs}
         #--lsm-type ${lsm_type} \
         #--lsm-weight ${lsm_weight} \
 fi
 
 
+if [ $stage -le 5 ]; then
+    run_decode.sh --stage 1 --expdir ${expdir}
+fi
+
+exit 0;
