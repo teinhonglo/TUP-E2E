@@ -69,21 +69,16 @@ maxlenratio=0.0
 minlenratio=0.0
 ctc_weight=0.5
 recog_model=model.acc.best # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
+use_ground_truth=false
 
 # scheduled sampling option
 samp_prob=0.0
-
-# data
-hkust1=/export/corpora/LDC/LDC2005S15/
-hkust2=/export/corpora/LDC/LDC2005T32/
 
 # exp tag
 tag="" # tag for managing experiments.
 
 . utils/parse_options.sh || exit 1;
 
-. ./path.sh
-. ./cmd.sh
 
 # Set bash to 'debug' mode, it will exit on :
 # -e 'error', -u 'undefined variable', -o ... 'error in pipeline', -x 'print commands',
@@ -114,8 +109,9 @@ if [ ${stage} -le 0 ]; then
     done
 fi
 
-feat_tr_dir=${dumpdir}/${train_set}/delta${do_delta}; mkdir -p ${feat_tr_dir}
-feat_dt_dir=${dumpdir}/${train_dev}/delta${do_delta}; mkdir -p ${feat_dt_dir}
+feat_tr_dir=${dumpdir}_gt${use_ground_truth}/${train_set}/delta${do_delta}; mkdir -p ${feat_tr_dir}
+feat_dt_dir=${dumpdir}_gt${use_ground_truth}/${train_dev}/delta${do_delta}; mkdir -p ${feat_dt_dir}
+
 if [ ${stage} -le 1 ]; then
     ### Task dependent. You have to design training and dev sets by yourself.
     ### But you can utilize Kaldi recipes in most cases
@@ -148,9 +144,11 @@ if [ ${stage} -le 1 ]; then
             ${feat_recog_dir}
     done
 fi
+
 dict=data/lang_1char/L1L2_train_sp_units.txt
-echo "dictionary: ${dict}"
 nlsyms=data/lang_1char/non_lang_syms.txt
+
+echo "dictionary: ${dict}"
 if [ ${stage} -le 2 ]; then
     ### Task dependent. You have to check non-linguistic symbols used in the corpus.
     echo "stage 2: Dictionary and Json Data Preparation"
@@ -222,9 +220,12 @@ if [ ${stage} -le 4 ]; then
         --maxlen-out ${maxlen_out} \
         --sampling-probability ${samp_prob} \
         --opt ${opt} \
-        --dropout-rate-decoder 0.0  \
-        --epochs ${epochs} &
+        --dropout-rate-decoder 0.0 \
+        --epochs ${epochs} 
         #--lsm-type ${lsm_type} \
         #--lsm-weight ${lsm_weight} \
 fi
 
+if [ $stage -le 5 ]; then
+    run_decode.sh --stage 1 --recog_set L2_test_nogt --dict $dict --nlsyms $nlsyms --expdir ${expdir} --use-ground-truth false
+fi
